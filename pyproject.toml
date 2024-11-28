@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mdtk"
+dynamic = ["version"]
+description = "Markdown Toolkit - Tools for working with markdown files"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+dependencies = [
+    "beautifulsoup4",
+]
+
+[tool.setuptools_scm]
+write_to = "src/mdtk/_version.py"
+
+[project.scripts]
+mdtk-bookmarks = "mdtk.bookmarks:main"
