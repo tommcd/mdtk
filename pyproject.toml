@@ -13,8 +13,16 @@ dependencies = [
     "beautifulsoup4",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
 [tool.setuptools_scm]
 write_to = "src/mdtk/_version.py"
 
 [project.scripts]
 mdtk-bookmarks = "mdtk.bookmarks:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

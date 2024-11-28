@@ -24,3 +24,6 @@ venv/
 ENV/
 .idea/
 .vscode/
+output.md
+test_bookmarks.html
+src/mdtk/_version.py
