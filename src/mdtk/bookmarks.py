@@ -66,7 +66,9 @@ def convert_bookmarks(
 
 def main():
     """Command line interface."""
-    parser = argparse.ArgumentParser(description="Convert Chrome bookmarks to markdown format")
+    parser = argparse.ArgumentParser(
+        description="Convert Chrome bookmarks to markdown format"
+    )
     parser.add_argument("input_file", help="Chrome bookmarks HTML file")
     parser.add_argument("output_file", help="Output markdown file")
     parser.add_argument(

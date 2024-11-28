@@ -1,6 +1,9 @@
-from pathlib import Path
+"""Test suite for bookmarks conversion."""
+
 import pytest
-from mdtk.bookmarks import convert_bookmarks, BookmarkError
+
+from mdtk.bookmarks import BookmarkError, convert_bookmarks
+
 
 @pytest.fixture
 def test_bookmarks_file(tmp_path):
@@ -25,19 +28,21 @@ def test_bookmarks_file(tmp_path):
     test_file.write_text(bookmarks_content)
     return test_file
 
+
 def test_basic_conversion(test_bookmarks_file, tmp_path):
-    """Test basic bookmark conversion with default folder"""
+    """Test basic bookmark conversion with default folder."""
     test_md = tmp_path / "output.md"
 
     convert_bookmarks(test_bookmarks_file, test_md)
 
-    content = test_md.read_text().strip().split('\n')
+    content = test_md.read_text().strip().split("\n")
     assert len(content) == 2
-    assert '- [GitHub - Where the world builds software](https://github.com)' in content
-    assert '- [Welcome to Python.org](https://python.org)' in content
+    assert "- [GitHub - Where the world builds software](https://github.com)" in content
+    assert "- [Welcome to Python.org](https://python.org)" in content
+
 
 def test_nonexistent_folder(test_bookmarks_file, tmp_path):
-    """Test error handling for non-existent folder"""
+    """Test error handling for non-existent folder."""
     test_md = tmp_path / "output.md"
 
     with pytest.raises(BookmarkError, match="Folder 'NonExistent' not found"):
