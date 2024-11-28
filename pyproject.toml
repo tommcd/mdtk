@@ -26,3 +26,16 @@ mdtk-bookmarks = "mdtk.bookmarks:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py38,py39,py310,py311,py312,py313
+isolated_build = True
+
+[testenv]
+deps =
+    pytest
+    beautifulsoup4
+commands = pytest {posargs:tests}
+"""
