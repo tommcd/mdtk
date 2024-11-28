@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest",
+    "ruff",
 ]
 
 [tool.setuptools_scm]
@@ -27,6 +28,21 @@ mdtk-bookmarks = "mdtk.bookmarks:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+fixable = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]
@@ -37,5 +53,9 @@ isolated_build = True
 deps =
     pytest
     beautifulsoup4
-commands = pytest {posargs:tests}
+    ruff
+commands =
+    ruff check .
+    ruff format --check .
+    pytest {posargs:tests}
 """
