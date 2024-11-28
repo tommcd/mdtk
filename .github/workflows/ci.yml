@@ -1,53 +1,8 @@
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  matrix-test:
-    name: Python ${{ matrix.python-version }} Matrix Test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest beautifulsoup4
-    - name: Install package
-      run: pip install -e .
-    - name: Run tests
-      run: pytest -v
-
-  tox-test:
-    name: Tox Test with UV
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Required for setuptools_scm
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-        cache: 'pip'
-    - name: Install uv and tox
-      run: |
-        python -m pip install --upgrade pip
-        pip install uv
-        uv tool install tox --with tox-uv
-    - name: Verify pyproject.toml
-      run: cat pyproject.toml
+[previous content remains the same until the tox step, where we change:]
     - name: Run tox with UV
       run: |
         echo "Current directory: $(pwd)"
         ls -la
-        tox r --verbose
+        echo "Content of pyproject.toml:"
+        cat pyproject.toml
+        PYTHONPATH=/home/runner/work/mdtk/mdtk tox r --verbose --workdir /home/runner/work/mdtk/mdtk
