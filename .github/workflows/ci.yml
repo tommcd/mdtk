@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,5 +18,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
-    - name: Build package
-      run: pip install build && python -m build
+    - name: Install package with test dependencies
+      run: pip install -e ".[test]"
+    - name: Run tests
+      run: pytest -v
