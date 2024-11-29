@@ -1,0 +1,8 @@
+site_name: mdtk
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
