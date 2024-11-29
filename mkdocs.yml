@@ -1,4 +1,9 @@
 site_name: mdtk
+site_description: Markdown Toolkit - Tools for working with markdown files
+repo_url: https://github.com/tommcd/mdtk
+repo_name: tommcd/mdtk
+edit_uri: edit/main/docs/
+
 theme:
   name: material
   features:
@@ -6,3 +11,12 @@ theme:
     - navigation.tracking
     - navigation.sections
     - navigation.expand
+  icon:
+    repo: fontawesome/brands/github
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tommcd/mdtk
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/mdtk/
