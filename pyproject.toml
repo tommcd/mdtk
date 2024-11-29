@@ -13,6 +13,12 @@ dependencies = [
     "beautifulsoup4",
 ]
 
+[project.urls]
+Documentation = "https://tommcd.github.io/mdtk"
+Repository = "https://github.com/tommcd/mdtk"
+Changelog = "https://github.com/tommcd/mdtk/releases"
+Issues = "https://github.com/tommcd/mdtk/issues"
+
 [project.optional-dependencies]
 test = [
     "pytest",
