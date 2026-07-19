@@ -185,6 +185,28 @@ def test_markdown_special_characters_are_escaped(tmp_path):
     )
 
 
+def test_url_brackets_encoded_outside_ipv6_host(tmp_path):
+    """Brackets in path/query are encoded; IPv6 host brackets are preserved."""
+    src = write_export(
+        tmp_path,
+        """<DL><p>
+    <DT><H3>EXPORT_FOLDER</H3>
+    <DL><p>
+        <DT><A HREF="https://x.example/api?tags[]=python">PHP-style query</A>
+        <DT><A HREF="http://[2001:db8::1]:8080/status[1]">Router status</A>
+    </DL><p>
+</DL><p>""",
+    )
+    out = tmp_path / "output.md"
+
+    convert_bookmarks(src, out)
+
+    assert out.read_text(encoding="utf-8") == (
+        "- [PHP-style query](https://x.example/api?tags%5B%5D=python)\n"
+        "- [Router status](http://[2001:db8::1]:8080/status%5B1%5D)\n"
+    )
+
+
 def test_bookmark_without_text_is_untitled(tmp_path):
     src = write_export(
         tmp_path,

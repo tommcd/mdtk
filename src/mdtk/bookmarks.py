@@ -4,6 +4,7 @@ import argparse
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup, Tag
 
@@ -23,7 +24,11 @@ def _escape_title(text: str) -> str:
 
 
 def _escape_url(url: str) -> str:
-    """Percent-encode characters that would break a markdown link target."""
+    """Percent-encode characters that would break a markdown link target.
+
+    Square brackets are encoded only outside the authority, where they
+    delimit IPv6 literal hosts (e.g. http://[2001:db8::1]:8080/).
+    """
     for char, quoted in (
         (" ", "%20"),
         ("(", "%28"),
@@ -32,7 +37,15 @@ def _escape_url(url: str) -> str:
         (">", "%3E"),
     ):
         url = url.replace(char, quoted)
-    return url
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return url
+    path, query, fragment = (
+        part.replace("[", "%5B").replace("]", "%5D")
+        for part in (parts.path, parts.query, parts.fragment)
+    )
+    return urlunsplit((parts.scheme, parts.netloc, path, query, fragment))
 
 
 def _find_folder(soup: BeautifulSoup, folder_name: str) -> Tag:
