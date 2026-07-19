@@ -14,6 +14,11 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
+markdown_extensions:
+  - pymdownx.snippets:
+      check_paths: true
+      base_path: !relative $config_dir
+
 extra:
   social:
     - icon: fontawesome/brands/github

@@ -2,91 +2,165 @@
 
 import argparse
 import sys
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 
 class BookmarkError(Exception):
     """Base exception for bookmark conversion errors."""
 
 
-def convert_bookmarks(
-    input_file: Path, output_file: Path, folder_name: Optional[str] = "EXPORT_FOLDER"
-) -> None:
-    """Convert Chrome bookmarks HTML file to markdown format."""
-    # Validate inputs
-    if not isinstance(input_file, Path):
-        input_file = Path(input_file)
-    if not isinstance(output_file, Path):
-        output_file = Path(output_file)
+def _clean_text(text: str) -> str:
+    """Collapse whitespace runs so titles stay on one markdown line."""
+    return " ".join(text.split())
 
-    # Check if input file exists and is readable
+
+def _escape_title(text: str) -> str:
+    """Escape characters that would break out of a markdown link label."""
+    return text.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+
+
+def _escape_url(url: str) -> str:
+    """Percent-encode characters that would break a markdown link target.
+
+    Square brackets are encoded only outside the authority, where they
+    delimit IPv6 literal hosts (e.g. http://[2001:db8::1]:8080/).
+    """
+    for char, quoted in (
+        (" ", "%20"),
+        ("(", "%28"),
+        (")", "%29"),
+        ("<", "%3C"),
+        (">", "%3E"),
+    ):
+        url = url.replace(char, quoted)
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return url
+    path, query, fragment = (
+        part.replace("[", "%5B").replace("]", "%5D")
+        for part in (parts.path, parts.query, parts.fragment)
+    )
+    return urlunsplit((parts.scheme, parts.netloc, path, query, fragment))
+
+
+def _find_folder(soup: BeautifulSoup, folder_name: str) -> Tag:
+    """Return the <h3> heading of the named bookmark folder."""
+    folders = soup.find_all("h3")
+    if not folders:
+        raise BookmarkError(
+            "No bookmark folders found in input - "
+            "is it a bookmarks HTML export (chrome://bookmarks > Export)?"
+        )
+    for folder in folders:
+        if _clean_text(folder.get_text()) == folder_name:
+            return folder
+    names = ", ".join(repr(_clean_text(f.get_text())) for f in folders)
+    raise BookmarkError(f"Folder {folder_name!r} not found. Available folders: {names}")
+
+
+def _find_bookmark_list(folder: Tag) -> Tag:
+    """Return the <dl> element holding *folder*'s bookmarks.
+
+    Bookmark exports place a folder's <dl> right after its <h3> heading.
+    Walk forward in document order but stop at the next folder heading, so
+    a folder without a list of its own raises an error instead of silently
+    picking up a later folder's bookmarks.
+    """
+    for element in folder.next_elements:
+        if not isinstance(element, Tag):
+            continue
+        if element.name == "dl":
+            return element
+        if element.name == "h3":
+            break
+    raise BookmarkError(
+        f"Folder {_clean_text(folder.get_text())!r} has no bookmark list"
+    )
+
+
+def convert_bookmarks(
+    input_file: Path | str,
+    output_file: Path | str,
+    folder_name: str = "EXPORT_FOLDER",
+) -> int:
+    """Convert one folder of a Chrome bookmarks HTML export to a markdown list.
+
+    Bookmarks in nested subfolders are included, flattened in document
+    order. If several folders share the same name, the first one in the
+    file is used. Returns the number of bookmarks written.
+    """
+    input_file = Path(input_file)
+    output_file = Path(output_file)
+
     if not input_file.exists():
         raise BookmarkError(f"Input file not found: {input_file}")
     if not input_file.is_file():
         raise BookmarkError(f"Not a file: {input_file}")
-
-    # Check if output directory exists and is writable
     if not output_file.parent.exists():
         raise BookmarkError(f"Output directory does not exist: {output_file.parent}")
 
     try:
-        with open(input_file, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f, "html.parser")
-    except Exception as e:
-        raise BookmarkError(f"Failed to parse HTML file: {e}")
+        html = input_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        raise BookmarkError(f"Failed to read {input_file}: {e}") from e
 
-    # Find target folder
-    folders = soup.find_all("h3")
-    target_folder = None
-    for folder in folders:
-        if folder.string == folder_name:
-            target_folder = folder
-            break
+    soup = BeautifulSoup(html, "html.parser")
+    target_folder = _find_folder(soup, folder_name)
+    bookmarks_dl = _find_bookmark_list(target_folder)
 
-    if not target_folder:
-        raise BookmarkError(f"Folder '{folder_name}' not found!")
+    lines = []
+    for bookmark in bookmarks_dl.find_all("a"):
+        title = _escape_title(_clean_text(bookmark.get_text())) or "Untitled"
+        url = _escape_url(bookmark.get("href", ""))
+        lines.append(f"- [{title}]({url})\n")
 
     try:
-        bookmarks_dl = target_folder.find_next("dl")
-        if not bookmarks_dl:
-            raise BookmarkError(f"No bookmarks found in folder '{folder_name}'")
-        bookmarks = bookmarks_dl.find_all("a")
+        output_file.write_text("".join(lines), encoding="utf-8")
+    except OSError as e:
+        raise BookmarkError(f"Failed to write {output_file}: {e}") from e
 
-        with open(output_file, "w", encoding="utf-8") as f:
-            for bookmark in bookmarks:
-                title = bookmark.string or "Untitled"
-                url = bookmark.get("href", "")
-                f.write(f"- [{title}]({url})\n")
-    except Exception as e:
-        raise BookmarkError(f"Failed to process bookmarks: {e}")
+    return len(lines)
 
 
-def main():
+def _version() -> str:
+    try:
+        return version("mdtk")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def main() -> None:
     """Command line interface."""
     parser = argparse.ArgumentParser(
-        description="Convert Chrome bookmarks to markdown format"
+        prog="mdtk-bookmarks",
+        description="Convert Chrome bookmarks to markdown format",
     )
-    parser.add_argument("input_file", help="Chrome bookmarks HTML file")
+    parser.add_argument(
+        "input_file", help="bookmarks HTML file (chrome://bookmarks > Export)"
+    )
     parser.add_argument("output_file", help="Output markdown file")
     parser.add_argument(
         "--folder",
         default="EXPORT_FOLDER",
         help="Folder name to extract (default: EXPORT_FOLDER)",
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {_version()}")
 
     args = parser.parse_args()
 
     try:
-        convert_bookmarks(args.input_file, args.output_file, args.folder)
+        count = convert_bookmarks(args.input_file, args.output_file, args.folder)
     except BookmarkError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
-        sys.exit(1)
+
+    plural = "" if count == 1 else "s"
+    print(f"Wrote {count} bookmark{plural} to {args.output_file}")
 
 
 if __name__ == "__main__":
