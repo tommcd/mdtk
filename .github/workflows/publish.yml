@@ -5,22 +5,46 @@ on:
     types: [published]
 
 jobs:
-  publish:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Required for setuptools_scm
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.x'
         cache: 'pip'
+    - name: Install package
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    - name: Lint and test
+      run: |
+        ruff check .
+        ruff format --check .
+        pytest
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mdtk
+    permissions:
+      id-token: write  # Required for PyPI trusted publishing (OIDC)
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Required for setuptools_scm
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
     - name: Build package
       run: |
         python -m pip install --upgrade pip
-        pip install build
+        pip install build twine
         python -m build
+        twine check dist/*
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
